@@ -32,4 +32,27 @@ export function createGroupController(server: Server, pgClient: Client) {
         }
         return next();
     });
+
+    // Endpoint to get list of groups
+    server.get('/groups', async (req, res, next) => {
+        try {
+            const result = await pgClient.query('SELECT * FROM groups');
+            res.send(200, result.rows);
+        } catch (error) {
+            res.send(500, error);
+        }
+        return next();
+    });
+
+    // Endpoint to get members of a group
+    server.get('/groups/:groupId/members', async (req, res, next) => {
+        const { groupId } = req.params;
+        try {
+            const result = await pgClient.query('SELECT user_id FROM group_members WHERE group_id = $1', [groupId]);
+            res.send(200, result.rows);
+        } catch (error) {
+            res.send(500, error);
+        }
+        return next();
+    });
 }

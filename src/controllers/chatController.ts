@@ -16,6 +16,32 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         return next();
     });
 
+    // Endpoint to send a group message
+    server.post('/messages/group', async (req, res, next) => {
+        const { senderId, groupId, content } = req.body;
+        try {
+            await pgClient.query('INSERT INTO messages (sender_id, group_id, content) VALUES ($1, $2, $3)', [senderId, groupId, content]);
+            // Notify group members (not implemented)
+            res.send(201);
+        } catch (error) {
+            res.send(500, error);
+        }
+        return next();
+    });
+
+    // Endpoint to send a global message
+    server.post('/messages/global', async (req, res, next) => {
+        const { senderId, content } = req.body;
+        try {
+            await pgClient.query('INSERT INTO messages (sender_id, group_id, content) VALUES ($1, NULL, $2)', [senderId, content]);
+            // Notify all users (not implemented)
+            res.send(201);
+        } catch (error) {
+            res.send(500, error);
+        }
+        return next();
+    });
+
     // Endpoint to get private message history
     server.get('/messages/history/private/:userId/:otherUserId', async (req, res, next) => {
         const { userId, otherUserId } = req.params;
@@ -28,13 +54,36 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         return next();
     });
 
+    // Endpoint to get group message history
+    server.get('/messages/history/group/:groupId', async (req, res, next) => {
+        const { groupId } = req.params;
+        try {
+            const result = await pgClient.query('SELECT * FROM messages WHERE group_id = $1 ORDER BY created_at', [groupId]);
+            res.send(200, result.rows);
+        } catch (error) {
+            res.send(500, error);
+        }
+        return next();
+    });
+
+    // Endpoint to get global message history
+    server.get('/messages/history/global', async (req, res, next) => {
+        try {
+            const result = await pgClient.query('SELECT * FROM messages WHERE group_id IS NULL ORDER BY created_at');
+            res.send(200, result.rows);
+        } catch (error) {
+            res.send(500, error);
+        }
+        return next();
+    });
+
     // Endpoint to get unread message count
-    // server.get('/messages/unread/:userId', async (req, res, next) => {
-    //     const { userId } = req.params;
-    //     redisClient.get(`unread_messages:${userId}`, (err, reply) => {
-    //         if (err) res.send(500, err);
-    //         else res.send(200, { unreadCount: reply || 0 });
-    //         return next();
-    //     });
-    // });
+    server.get('/messages/unread/:userId', async (req, res, next) => {
+        const { userId } = req.params;
+        redisClient.get(`unread_messages:${userId}`, (err: any, reply: any) => {
+            if (err) res.send(500, err);
+            else res.send(200, { unreadCount: reply || 0 });
+            return next();
+        });
+    });
 }
