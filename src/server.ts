@@ -3,18 +3,30 @@ dotenv.config(); // Load environment variables from .env file
 
 import * as restify from 'restify';
 import { Server, Socket } from 'socket.io';
-import * as redis from 'redis';
+import { createClient } from 'redis';
 import { Client } from 'pg';
 import { createChatController } from './controllers/chatController';
 import { createGroupController } from './controllers/groupController';
 import { initNotificationService } from './services/notificationService';
-import { initRedisService } from './services/redisService';
 
 export function createServer() {
 
     const server = restify.createServer();
     const io = new Server(server.server);
-    const redisClient = redis.createClient();
+    const redisClient = createClient({
+        url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
+    });
+
+    redisClient.on('connect', () => {
+        console.log('Connected to Redis');
+    });
+
+    redisClient.on('error', (err) => {
+        console.log('Redis error: ', err);
+    });
+
+    redisClient.connect();
+
     const pgClient = new Client({
         user: process.env.DB_USER,
         host: process.env.DB_HOST,
@@ -31,8 +43,6 @@ export function createServer() {
 
     // Initialize services
     initNotificationService(io);
-    initRedisService(redisClient);
-
     // Register controllers
     createChatController(server, pgClient, redisClient);
     createGroupController(server, pgClient);
