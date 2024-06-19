@@ -1,0 +1,39 @@
+{
+    "name": "chat-service",
+    "version": "1.0.0",
+    "description": "",
+    "main": "dist/index.js",
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "dev": "ts-node-dev src/index.ts",
+        "test": "mocha -r ts-node/register 'src/tests/**/*.test.ts'",
+        "migrate": "db-migrate up --config database.js"
+    },
+    "dependencies": {
+        "aws-sdk": "^2.1644.0",
+        "db-migrate": "^0.11.14",
+        "db-migrate-pg": "^1.5.2",
+        "dotenv": "^16.4.5",
+        "pg": "^8.12.0",
+        "redis": "^4.6.14",
+        "restify": "^11.1.0",
+        "socket.io": "^4.7.5",
+        "socket.io-redis": "^6.1.1"
+    },
+    "devDependencies": {
+        "@types/aws-sdk": "^2.7.0",
+        "@types/chai": "^4.3.16",
+        "@types/mocha": "^10.0.6",
+        "@types/node": "^20.14.5",
+        "@types/pg": "^8.11.6",
+        "@types/redis": "^4.0.11",
+        "@types/restify": "^8.5.12",
+        "@types/socket.io": "^3.0.2",
+        "chai": "^5.1.1",
+        "mocha": "^10.4.0",
+        "ts-node": "^10.9.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.4.5"
+    }
+}
