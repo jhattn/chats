@@ -1,0 +1,123 @@
+{
+    "info": {
+      "name": "Chat Service",
+      "description": "Postman collection for the Chat Service",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Create Group",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"name\": \"Test Group\",\n  \"avatar\": \"http://example.com/avatar.png\",\n  \"members\": [1, 2]\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/groups",
+            "host": [
+              "{{base_url}}"
+            ],
+            "path": [
+              "groups"
+            ]
+          }
+        },
+        "response": []
+      },
+      {
+        "name": "Leave Group",
+        "request": {
+          "method": "DELETE",
+          "header": [],
+          "url": {
+            "raw": "{{base_url}}/groups/{{groupId}}/members/{{userId}}",
+            "host": [
+              "{{base_url}}"
+            ],
+            "path": [
+              "groups",
+              "{{groupId}}",
+              "members",
+              "{{userId}}"
+            ]
+          }
+        },
+        "response": []
+      },
+      {
+        "name": "Send Private Message",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"senderId\": {{senderId}},\n  \"receiverId\": {{receiverId}},\n  \"content\": \"Hello, this is a private message.\"\n}"
+          },
+          "url": {
+            "raw": "{{base_url}}/messages/private",
+            "host": [
+              "{{base_url}}"
+            ],
+            "path": [
+              "messages",
+              "private"
+            ]
+          }
+        },
+        "response": []
+      },
+      {
+        "name": "Get Private Message History",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{base_url}}/messages/history/private/{{userId}}/{{otherUserId}}",
+            "host": [
+              "{{base_url}}"
+            ],
+            "path": [
+              "messages",
+              "history",
+              "private",
+              "{{userId}}",
+              "{{otherUserId}}"
+            ]
+          }
+        },
+        "response": []
+      },
+      {
+        "name": "Get Unread Message Count",
+        "request": {
+          "method": "GET",
+          "header": [],
+          "url": {
+            "raw": "{{base_url}}/messages/unread/{{userId}}",
+            "host": [
+              "{{base_url}}"
+            ],
+            "path": [
+              "messages",
+              "unread",
+              "{{userId}}"
+            ]
+          }
+        },
+        "response": []
+      }
+    ]
+  }
+  
