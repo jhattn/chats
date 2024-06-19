@@ -2,17 +2,19 @@ import * as dotenv from 'dotenv';
 dotenv.config(); // Load environment variables from .env file
 
 import * as restify from 'restify';
-import { Server, Socket } from 'socket.io';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import { createClient } from 'redis';
 import { Client } from 'pg';
 import { createChatController } from './controllers/chatController';
 import { createGroupController } from './controllers/groupController';
-import { initNotificationService } from './services/notificationService';
+
+import * as path from 'path';
+
 
 export function createServer() {
 
     const server = restify.createServer();
-    const io = new Server(server.server);
+    const io = new SocketIOServer(server.server);
     const redisClient = createClient({
         url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
     });
@@ -41,20 +43,32 @@ export function createServer() {
     // Middleware to parse request body
     server.use(restify.plugins.bodyParser());
 
-    // Initialize services
-    initNotificationService(io);
+      // Middleware to parse request body
+      server.use(restify.plugins.bodyParser());
+
+      // Serve static files from the public directory
+      server.get('/test', restify.plugins.serveStatic({
+          directory: path.join(__dirname, '../public'),
+          file: 'index.html'
+      }));
+
     // Register controllers
-    createChatController(server, pgClient, redisClient);
+    createChatController(server, pgClient, redisClient, io);
     createGroupController(server, pgClient);
 
-    // Handle Socket.io connections
     io.on('connection', (socket: Socket) => {
         console.log('a user connected');
-
+    
+        socket.on('join', ({ groupId }) => {
+            socket.join(groupId.toString());
+            console.log(`User joined group ${groupId}`);
+        });
+    
         socket.on('disconnect', () => {
             console.log('user disconnected');
         });
     });
+    
 
     return server;
 }

@@ -1,13 +1,16 @@
 import { Server } from 'restify';
 import { Client } from 'pg';
+import { Server as SocketIOServer } from 'socket.io';
+
 // Define and export the chat controller function
-export function createChatController(server: Server, pgClient: Client, redisClient: any) {
+export function createChatController(server: Server, pgClient: Client, redisClient: any, io: SocketIOServer) {
     // Endpoint to send a private message
     server.post('/messages/private', async (req, res, next) => {
         const { senderId, receiverId, content } = req.body;
         try {
             await pgClient.query('INSERT INTO private_messages (sender_id, receiver_id, content) VALUES ($1, $2, $3)', [senderId, receiverId, content]);
             await redisClient.incr(`unread_messages:${receiverId}`);
+            io.to(receiverId.toString()).emit('private_message', { senderId, content });
             res.send(201);
         } catch (error:any) {
             res.send(500, { error: error.message });
@@ -20,7 +23,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         const { senderId, groupId, content } = req.body;
         try {
             await pgClient.query('INSERT INTO messages (sender_id, group_id, content) VALUES ($1, $2, $3)', [senderId, groupId, content]);
-            // Notify group members (not implemented)
+            io.to(groupId.toString()).emit('group_message', { senderId, groupId, content });
             res.send(201);
         } catch (error:any) {
             res.send(500, { error: error.message });
@@ -33,7 +36,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         const { senderId, content } = req.body;
         try {
             await pgClient.query('INSERT INTO messages (sender_id, group_id, content) VALUES ($1, NULL, $2)', [senderId, content]);
-            // Notify all users (not implemented)
+            io.emit('global_message', { senderId, content });
             res.send(201);
         } catch (error:any) {
             res.send(500, { error: error.message });

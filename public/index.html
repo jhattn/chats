@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Test</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            width: 600px;
+            margin: 0 auto;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebSocket Chat Test</h1>
+
+        <div class="section">
+            <h2>Create Group</h2>
+            <input type="text" id="groupName" placeholder="Enter group name">
+            <input type="text" id="groupAvatar" placeholder="Enter group avatar URL">
+            <button id="createGroup">Create Group</button>
+        </div>
+
+        <div class="section">
+            <h2>Join Group</h2>
+            <input type="text" id="joinGroupId" placeholder="Enter group ID">
+            <button id="joinGroup">Join Group</button>
+        </div>
+
+        <div class="section">
+            <h2>Leave Group</h2>
+            <input type="text" id="leaveGroupId" placeholder="Enter group ID">
+            <input type="text" id="leaveUserId" placeholder="Enter user ID">
+            <button id="leaveGroup">Leave Group</button>
+        </div>
+
+        <div class="section">
+            <h2>Send Private Message</h2>
+            <input type="text" id="privateReceiverId" placeholder="Enter receiver ID">
+            <input type="text" id="privateMessage" placeholder="Enter message">
+            <button id="sendPrivateMessage">Send Private Message</button>
+        </div>
+
+        <div class="section">
+            <h2>Send Group Message</h2>
+            <input type="text" id="groupId" placeholder="Enter group ID">
+            <input type="text" id="groupMessage" placeholder="Enter message">
+            <button id="sendGroupMessage">Send Group Message</button>
+        </div>
+
+        <div class="section">
+            <h2>Send Global Message</h2>
+            <input type="text" id="globalMessage" placeholder="Enter message">
+            <button id="sendGlobalMessage">Send Global Message</button>
+        </div>
+
+        <div class="section">
+            <h2>Messages</h2>
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://localhost:8080');
+
+        socket.on('connect', () => {
+            console.log('Connected to WebSocket server');
+        });
+
+        socket.on('disconnect', () => {
+            console.log('Disconnected from WebSocket server');
+        });
+
+        socket.on('group_message', (message) => {
+            displayMessage(`Group message: ${message.content}`);
+        });
+
+        socket.on('private_message', (message) => {
+            displayMessage(`Private message: ${message.content}`);
+        });
+
+        socket.on('global_message', (message) => {
+            displayMessage(`Global message: ${message.content}`);
+        });
+
+        document.getElementById('createGroup').addEventListener('click', () => {
+            const name = document.getElementById('groupName').value;
+            const avatar = document.getElementById('groupAvatar').value;
+
+            fetch('http://localhost:8080/groups', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name, avatar, members: [] }), // Add logic to include members
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Group created:', data);
+                displayMessage(`Group created with ID: ${data.groupId}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('joinGroup').addEventListener('click', () => {
+            const groupId = document.getElementById('joinGroupId').value;
+            socket.emit('join', { groupId });
+            displayMessage(`Joined group ${groupId}`);
+        });
+
+        document.getElementById('leaveGroup').addEventListener('click', () => {
+            const groupId = document.getElementById('leaveGroupId').value;
+            const userId = document.getElementById('leaveUserId').value;
+
+            fetch(`http://localhost:8080/groups/${groupId}/members/${userId}`, {
+                method: 'DELETE',
+            })
+            .then(() => {
+                console.log('Left group:', groupId);
+                displayMessage(`User ${userId} left group ${groupId}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('sendPrivateMessage').addEventListener('click', () => {
+            const receiverId = document.getElementById('privateReceiverId').value;
+            const content = document.getElementById('privateMessage').value;
+
+            fetch('http://localhost:8080/messages/private', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ senderId: '1', receiverId, content }), // Replace senderId with actual user ID
+            })
+            .then(() => {
+                console.log('Private message sent to:', receiverId);
+                displayMessage(`Private message sent to ${receiverId}: ${content}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('sendGroupMessage').addEventListener('click', () => {
+            const groupId = document.getElementById('groupId').value;
+            const content = document.getElementById('groupMessage').value;
+
+            fetch('http://localhost:8080/messages/group', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ senderId: '1', groupId, content }), // Replace senderId with actual user ID
+            })
+            .then(() => {
+                console.log('Group message sent to:', groupId);
+                displayMessage(`Group message sent to ${groupId}: ${content}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('sendGlobalMessage').addEventListener('click', () => {
+            const content = document.getElementById('globalMessage').value;
+
+            fetch('http://localhost:8080/messages/global', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ senderId: '1', content }), // Replace senderId with actual user ID
+            })
+            .then(() => {
+                console.log('Global message sent:', content);
+                displayMessage(`Global message: ${content}`);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        function displayMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            document.getElementById('messages').appendChild(messageDiv);
+        }
+    </script>
+</body>
+</html>
