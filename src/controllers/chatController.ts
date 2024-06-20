@@ -1,9 +1,9 @@
 import { Server } from 'restify';
 import { Client } from 'pg';
+import { RedisClientType } from 'redis';
 import { Server as SocketIOServer } from 'socket.io';
 
-// Define and export the chat controller function
-export function createChatController(server: Server, pgClient: Client, redisClient: any, io: SocketIOServer) {
+export function createChatController(server: Server, pgClient: Client, redisClient: any, io: SocketIOServer, redisPubClient: any) {
     // Endpoint to send a private message
     server.post('/messages/private', async (req, res, next) => {
         const { senderId, receiverId, content } = req.body;
@@ -12,7 +12,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
             await redisClient.incr(`unread_messages:${receiverId}`);
             io.to(receiverId.toString()).emit('private_message', { senderId, content });
             res.send(201);
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();
@@ -23,9 +23,10 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         const { senderId, groupId, content } = req.body;
         try {
             await pgClient.query('INSERT INTO messages (sender_id, group_id, content) VALUES ($1, $2, $3)', [senderId, groupId, content]);
-            io.to(groupId.toString()).emit('group_message', { senderId, groupId, content });
+            const message = { senderId, groupId, content };
+            redisPubClient.publish('chat_channel', JSON.stringify(message));
             res.send(201);
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();
@@ -38,7 +39,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
             await pgClient.query('INSERT INTO messages (sender_id, group_id, content) VALUES ($1, NULL, $2)', [senderId, content]);
             io.emit('global_message', { senderId, content });
             res.send(201);
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();
@@ -50,7 +51,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         try {
             const result = await pgClient.query('SELECT * FROM private_messages WHERE (sender_id = $1 AND receiver_id = $2) OR (sender_id = $2 AND receiver_id = $1) ORDER BY created_at', [userId, otherUserId]);
             res.send(200, result.rows);
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();
@@ -62,7 +63,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         try {
             const result = await pgClient.query('SELECT * FROM messages WHERE group_id = $1 ORDER BY created_at', [groupId]);
             res.send(200, result.rows);
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();
@@ -73,7 +74,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         try {
             const result = await pgClient.query('SELECT * FROM messages WHERE group_id IS NULL ORDER BY created_at');
             res.send(200, result.rows);
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();
@@ -85,7 +86,7 @@ export function createChatController(server: Server, pgClient: Client, redisClie
         try {
             const reply = await redisClient.get(`unread_messages:${userId}`);
             res.send(200, { unreadCount: reply || 0 });
-        } catch (error:any) {
+        } catch (error: any) {
             res.send(500, { error: error.message });
         }
         return next();

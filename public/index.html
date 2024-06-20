@@ -94,6 +94,15 @@
             displayMessage(`Global message: ${message.content}`);
         });
 
+        socket.on('ping', (data) => {
+            console.log('Ping received', data);
+            socket.emit('pong', { beat: 1 });
+        });
+
+        socket.on('error', (message) => {
+            alert(message);
+        });
+
         document.getElementById('createGroup').addEventListener('click', () => {
             const name = document.getElementById('groupName').value;
             const avatar = document.getElementById('groupAvatar').value;
